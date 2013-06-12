@@ -1,0 +1,17 @@
+apply plugin: 'java'
+apply plugin: 'eclipse'
+
+dependencies {
+    compile 'com.basho.riak:riak-client:1.1.0'
+}
+
+repositories {
+    mavenLocal()
+    maven {
+        url "http://nexus.ci82.trifork.com/content/groups/public/"
+    }
+}
+
+jar {
+	from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+}
