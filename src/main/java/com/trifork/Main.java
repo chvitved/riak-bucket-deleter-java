@@ -20,8 +20,8 @@ import com.basho.riak.client.raw.http.HTTPRiakClientFactory;
 public class Main {
 
 	private int maxThreads = 100;
-	private ThreadPoolExecutor deleteThreadPoolExecutor = new ThreadPoolExecutor(1, maxThreads, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(100000));
-	private ThreadPoolExecutor listKeysThreadPoolExecutor = new ThreadPoolExecutor(1, 10, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(10));
+	private ThreadPoolExecutor deleteThreadPoolExecutor = new ThreadPoolExecutor(1, maxThreads, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(1000), new ThreadPoolExecutor.CallerRunsPolicy());
+	private ThreadPoolExecutor listKeysThreadPoolExecutor = new ThreadPoolExecutor(1, 10, 10, TimeUnit.SECONDS, new LinkedBlockingQueue<Runnable>(100), new ThreadPoolExecutor.CallerRunsPolicy());
 	
 	public static void main(String[] args) throws Exception {
 		new Main().run();
@@ -98,16 +98,22 @@ public class Main {
 				public void run() {
 					try {
 						riakClient.delete(bucket, k);
+						int value = size.incrementAndGet();
+						if (value % 10000 == 0) {
+							System.out.format("deleted %d keys in %s\n", value, bucket);
+						}
 					} catch (Exception e) {
 						throw new RuntimeException(e);
 					}
 				}
 			});
-			int value = size.incrementAndGet();
-			if (value % 10000 == 0) {
-				System.out.format("read %d keys in %s\n", value, bucket);
-			}
 		}
+		deleteThreadPoolExecutor.execute(new Runnable() {
+			@Override
+			public void run() {
+				System.out.println("done deleting keys in bucket " + bucket);
+			}
+		});
 		System.out.format("Done reading keys for bucket %s. Read %d keys\n", bucket, size.get());
 	}
 	
